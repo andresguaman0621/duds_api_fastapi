@@ -10,7 +10,12 @@ router = APIRouter()
 def get_categories():
     """Obtener todas las categorías disponibles"""
     # Obtener todos los productos con stock desde la vista
-    query = f"SELECT ID as id, clean_name AS name FROM {settings.PRODUCTS_VIEW} WHERE stock_int >= 1"
+    query = f"""
+        SELECT v.ID as id, v.clean_name AS name
+        FROM {settings.PRODUCTS_VIEW} v
+        WHERE v.stock_int >= 1
+        ORDER BY v.ID ASC
+    """
     products = execute_query(query)
 
     # Contar productos por categoría
@@ -37,15 +42,16 @@ def get_sizes_by_category(category: str):
     # Obtener productos con stock desde la vista
     query = f"""
         SELECT
-            ID as id,
-            clean_name AS name,
+            v.ID as id,
+            v.clean_name AS name,
             CASE
-                WHEN talla_raw IS NOT NULL AND TRIM(talla_raw) != '' THEN
-                    UPPER(SUBSTRING_INDEX(talla_raw, '-', -1))
+                WHEN v.talla_raw IS NOT NULL AND TRIM(v.talla_raw) != '' THEN
+                    UPPER(SUBSTRING_INDEX(v.talla_raw, '-', -1))
                 ELSE 'Única'
             END AS size
-        FROM {settings.PRODUCTS_VIEW}
-        WHERE stock_int >= 1
+        FROM {settings.PRODUCTS_VIEW} v
+        WHERE v.stock_int >= 1
+        ORDER BY v.ID ASC
     """
     products = execute_query(query)
 

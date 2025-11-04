@@ -8,6 +8,7 @@ from app.schemas import (
     CategoryListResponse
 )
 from app.models import Category
+from app.utils import clear_categories_cache
 
 router = APIRouter()
 
@@ -83,6 +84,9 @@ def create_category(category: CategoryCreate):
         fetch_all=False
     )
 
+    # Limpiar cache de categorías
+    clear_categories_cache()
+
     # Obtener la categoría creada
     return get_category(category_id)
 
@@ -125,6 +129,9 @@ def update_category(category_id: int, category: CategoryUpdate):
     update_query = f"UPDATE categories SET {', '.join(update_fields)} WHERE id = %s"
     execute_query(update_query, tuple(params), fetch_one=False, fetch_all=False)
 
+    # Limpiar cache de categorías
+    clear_categories_cache()
+
     # Retornar categoría actualizada
     return get_category(category_id)
 
@@ -142,5 +149,8 @@ def delete_category(category_id: int):
     # Eliminar categoría
     delete_query = "DELETE FROM categories WHERE id = %s"
     execute_query(delete_query, (category_id,), fetch_one=False, fetch_all=False)
+
+    # Limpiar cache de categorías
+    clear_categories_cache()
 
     return None

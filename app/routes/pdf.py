@@ -34,29 +34,33 @@ def generate_pdf(request: Request, pdf_request: PDFRequest):
     category = pdf_request.category
     sizes = pdf_request.sizes
 
-    # Obtener productos filtrados desde la vista
+    # Obtener productos filtrados desde la vista con JOIN para thumbnail
     query = f"""
         SELECT
-            ID as id,
-            clean_name AS name,
+            v.ID as id,
+            v.clean_name AS name,
             CASE
-                WHEN color_raw IS NOT NULL AND TRIM(color_raw) != '' THEN
+                WHEN v.color_raw IS NOT NULL AND TRIM(v.color_raw) != '' THEN
                     CONCAT(
-                        UPPER(LEFT(REPLACE(color_raw, '-', ' '), 1)),
-                        LOWER(SUBSTRING(REPLACE(color_raw, '-', ' '), 2))
+                        UPPER(LEFT(REPLACE(v.color_raw, '-', ' '), 1)),
+                        LOWER(SUBSTRING(REPLACE(v.color_raw, '-', ' '), 2))
                     )
                 ELSE 'Sin color'
             END AS color,
             CASE
-                WHEN talla_raw IS NOT NULL AND TRIM(talla_raw) != '' THEN
-                    UPPER(SUBSTRING_INDEX(talla_raw, '-', -1))
+                WHEN v.talla_raw IS NOT NULL AND TRIM(v.talla_raw) != '' THEN
+                    UPPER(SUBSTRING_INDEX(v.talla_raw, '-', -1))
                 ELSE 'Única'
             END AS size,
-            stock_int AS stock,
-            COALESCE(thumbnail_url, '') AS thumbnail_url
-        FROM {settings.PRODUCTS_VIEW}
-        WHERE stock_int >= 1
+            v.stock_int AS stock,
+            COALESCE(att.guid, '') AS thumbnail_url
+        FROM {settings.PRODUCTS_VIEW} v
+        LEFT JOIN wpdt_posts att ON v.thumbnail_id = att.ID
+            AND att.post_type = 'attachment'
+        WHERE v.stock_int >= 1
+        ORDER BY v.ID ASC
     """
+
     products = execute_query(query)
 
     # Convertir a objetos Product y filtrar
@@ -209,7 +213,7 @@ def _generate_single_pdf(category: str, size: str, products: list) -> str:
             cleanup_temp_file(temp_path)
 
         except Exception as e:
-            print(f"Error procesando producto {product.id}: {str(e)}")
+            # Error al procesar imagen del producto
             c.setFont("Helvetica", 10)
             c.drawString(x + 10, y - 30, "Error al cargar imagen")
 
